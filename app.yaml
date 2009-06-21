@@ -7,9 +7,8 @@ handlers:
 - url: /
   static_files: index.html
   upload: index.html
-- url: /test_data
-  static_dir: test_data
 - url: /test.*
   script: gaeunit.py
+  login: admin
 - url: /.*
   script: main.py

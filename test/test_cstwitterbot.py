@@ -22,7 +22,7 @@ class TwitterBotTest (unittest.TestCase):
     self.assertEqual(question.data, "testing, testing, one, two, three.")
     
   def testAnswerAQuestion(self):
-    question = Question({ "id" : "testid", "user" : { "screen_name": "testusername"}, "text": "@username restaurants collingwood" })
+    question = Question.from_mention({ "id" : "testid", "user" : { "screen_name": "testusername"}, "text": "@username restaurants collingwood" })
     client = Mock()
     oracle = Mock({"answer": "cheesy cheese"})
     twitterbot = TwitterBot(client, oracle)
@@ -39,7 +39,7 @@ class TwitterBotTest (unittest.TestCase):
     client = Mock({ "mentions": test_mentions })
     twitterbot = TwitterBot(client, None)
     
-    lastQuestion = Question({ "id" : "12345", "user" : { "screen_name": "testusername"}, "text": "@username blah" })
+    lastQuestion = Question.from_mention({ "id" : "12345", "user" : { "screen_name": "testusername"}, "text": "@username blah" })
     questions = twitterbot.questions_since(lastQuestion)
     client.mockCheckCall(0, "mentions", "12345")
     

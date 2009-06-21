@@ -3,6 +3,7 @@ import logging
 import re
 import urllib
 
+from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 from django.utils import simplejson
@@ -49,8 +50,8 @@ class TwitterBot:
         
     questions = []
     for mention in mentions:
-      question = Question(mention)
-      if question.isValid():
+      question = Question.from_mention(mention)
+      if question:
         questions.append(question)
       
     return questions
@@ -58,49 +59,41 @@ class TwitterBot:
   def answer(self, question):
     self.client.reply(question.id, question.asker, self.oracle.answer(question.data))
     
-class Question:
-  id = ""
-  asker = ""
-  data = ""
+class Question(db.Model):
+  id = db.StringProperty(default="")
+  asker = db.StringProperty(default="")
+  data = db.StringProperty(default="")
+  retrieved = db.DateTimeProperty(auto_now_add=True)
+  answered = db.DateTimeProperty(auto_now=True)
   
-  def __init__(self, mention):
+  def from_mention(mention):
+    question = Question()
     if "id" in mention:
-      self.id = mention['id']
+      question.id = mention['id']
     if "user" in mention and 'screen_name' in mention['user']:
-      self.asker = mention['user']['screen_name']
+      question.asker = mention['user']['screen_name']
     if "text" in mention:
-      self.data = self.__clean(mention['text'])
-    
-  def __clean(self, text):
+      question.data = Question._clean(mention['text'])
+      
+    if not question.is_valid():
+      question = None
+      
+    return question
+
+  def _clean(text):
     cleaned = re.sub(r'^@.*?\s','', text).strip()
     return cleaned
     
-  def isValid(self):
-    return len(self.asker) > 0 and len(self.id) > 0 and len(self.data) > 0 and self.data.find("@") == -1
-      
-class ListenHandler(webapp.RequestHandler):
-
-  def get(self):
-    username = "csausbot"
-    password = "chw1l10dd1n4s"
-    self.response.headers['Content-Type'] = 'text/plain'
-    url = "http://twitter.com/statuses/mentions.json"
-    result = urlfetch.fetch(url, None, method=urlfetch.GET, headers=headers)
+  def last_question():
+    query = Question.all()
+    query.order("-retrieved")
+    return query.get()
     
-    if result.status_code != 200:
-      self.response.out.write("Problem at the twitter end, response was: "+result.content)
-      return
-    else:
-			mentions = simplejson.load(result.content)
-      
-    try:
-			for mention in mentions:
-				text = mention['text']
-				id = mention['id']
-				user = mention['user']['screen_name']
-				self.response.out.write("Twitterer "+user+" said: "+text+" (id: "+id+")\n")
-    except DeadlineExceededError:
-			self.response.clear()
-			self.response.set_status(500)
-			self.response.out.write("This operation could not be completed in time...")
+  from_mention = staticmethod(from_mention)
+  _clean = staticmethod(_clean)
+  last_question = staticmethod(last_question)
+        
+    
+  def is_valid(self):
+    return len(self.asker) > 0 and len(self.id) > 0 and len(self.data) > 0 and self.data.find("@") == -1
  	
