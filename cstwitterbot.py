@@ -8,13 +8,17 @@ from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 from django.utils import simplejson
 
+class TwitterCredentials(db.Model):
+  username = db.StringProperty(required=True)
+  password = db.StringProperty(required=True)
+  
 class TwitterClient:
   headers = {}
   fetcher = None
   
-  def __init__(self, fetcher, username, password):
+  def __init__(self, fetcher, credentials):
     self.fetcher = fetcher
-    base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
+    base64string = base64.encodestring('%s:%s' % (credentials.username, credentials.password))[:-1]
     self.headers = {'Authorization': "Basic %s" % base64string}
     
   def mentions(self, last_status_id = -1):
@@ -52,6 +56,7 @@ class TwitterBot:
     for mention in mentions:
       question = Question.from_mention(mention)
       if question:
+        question.put()
         questions.append(question)
       
     return questions
@@ -65,6 +70,7 @@ class Question(db.Model):
   data = db.StringProperty(default="")
   retrieved = db.DateTimeProperty(auto_now_add=True)
   answered = db.DateTimeProperty(auto_now=True)
+  location = db.GeoPtProperty()
   
   def from_mention(mention):
     question = Question()

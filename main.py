@@ -1,31 +1,53 @@
 #!/usr/bin/env python
 #
-# Copyright 2007 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
-
-
 
 import wsgiref.handlers
 import cstwitterbot
+import os
+import logging
 
+from google.appengine.ext.db import BadValueError
+from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
 
+class SetupHandler(webapp.RequestHandler):
+	def get(self):
+		credentials = cstwitterbot.TwitterCredentials.all().get()
+		if self.request.path == "/setup/clear" and credentials:
+			credentials.delete()
+			credentials = None
+			
+		path = os.path.join(os.path.dirname(__file__), 'setup.html')
+		self.response.out.write(template.render(path, { "credentials": credentials }))
+		
+	def post(self):
+		credentials = cstwitterbot.TwitterCredentials.all().get()
+		user = self.request.get('username')
+		pw = self.request.get('password')
+		error = None
+		try:
+			if credentials:
+				credentials.username = self.request.get('username')
+				credentials.password = self.request.get('password')
+			else:
+				credentials = cstwitterbot.TwitterCredentials(username=user, password=pw)
+			credentials.put()
+		except BadValueError, detail:
+			logging.error("Problem with twitter credentials: %s", detail)
+			error = "You have to specify a username and password."
+			
+		template_values = { "credentials": credentials, "error": error }
+		path = os.path.join(os.path.dirname(__file__), 'setup.html')
+		self.response.out.write(template.render(path, template_values))		
+		
 def main():
-	global headers
-	application = webapp.WSGIApplication([('/listen', cstwitterbot.ListenHandler)], debug=True)
+	application = webapp.WSGIApplication(
+	[
+	('/setup', SetupHandler),
+	('/setup/clear', SetupHandler)
+	#('/listen', ListenHandler),
+	#('/answer', AnswerHandler)
+	])
 	wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':

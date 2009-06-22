@@ -2,6 +2,7 @@ import unittest
 import base64
 from mock import Mock
 from cstwitterbot import TwitterClient
+from cstwitterbot import TwitterCredentials
 from google.appengine.api import urlfetch
 
 class TwitterClientTest (unittest.TestCase):
@@ -14,8 +15,9 @@ class TwitterClientTest (unittest.TestCase):
     response.status_code = 200
     response.content = "[{ \"cheese\": \"biscuits\" }]"
     
+    credentials = TwitterCredentials(username="csausbot", password="testing")
     self.fetcher = Mock({"fetch": response}, urlfetch)
-    self.client = TwitterClient(self.fetcher, "csausbot", "testing")
+    self.client = TwitterClient(self.fetcher, credentials)
     
   def testCredentials(self):
     authorization = self.client.headers['Authorization']

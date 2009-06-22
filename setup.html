@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>Citysearch&reg; Twitter Bot Setup</title>
+  </head>
+  <body>
+    <h1>Twitter Credentials</h1>
+    {% if credentials %}
+      <p>Current username: {{credentials.username}}</p>
+      <p><a href="/setup/clear">Clear credentials</a> (this turns off the twitterbot).</p>
+    {% else %}
+      <p>No twitter username stored yet.</p>
+    {% endif %}
+    
+    <h2>Change username</h2>
+    {% if error %}
+      <p class="error">{{error}}</p>
+    {% endif %}
+    <form method="POST" action="/setup">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" value="{{credentials.username}}"/>
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" value="{{credentials.password}}"/>
+      <input type="submit" value="store"/>
+    </form>
+    
+</html>
