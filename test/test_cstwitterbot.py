@@ -24,7 +24,7 @@ class TwitterBotTest (unittest.TestCase):
       ]
     client = Mock({ "mentions": test_mentions })
     
-    twitterbot = TwitterBot(client, None)
+    twitterbot = TwitterBot(client, None, None)
     questions = twitterbot.questions_since(None)
     client.mockCheckCall(0, "mentions", -1)
     
@@ -44,10 +44,24 @@ class TwitterBotTest (unittest.TestCase):
     question = Question.from_mention({ "id" : "testid", "user" : { "screen_name": "testusername"}, "text": "@username restaurants collingwood" })
     client = Mock()
     oracle = Mock({"answer": "cheesy cheese"})
-    twitterbot = TwitterBot(client, oracle)
+    twitterbot = TwitterBot(client, oracle, None)
     twitterbot.answer(question)
     client.mockCheckCall(0, "reply", "testid", "testusername", "cheesy cheese")
     oracle.mockCheckCall(0, "answer", "restaurants collingwood")
+    
+  def test_should_shorten_answers(self):
+    question = Question.from_mention({ "id" : "testid", "user" : { "screen_name": "testusername"}, "text": "@username restaurants collingwood" })
+    client = Mock()
+    oracle = Mock({"answer": "http://longurl.com/blah/cheesy/cheese"})
+    urlshortener = Mock({"shorten": "http://shorturl.com/edam", "__nonzero__": 1})
+    
+    twitterbot = TwitterBot(client, oracle, urlshortener)
+    twitterbot.answer(question)
+    
+    oracle.mockCheckCall(0, "answer", "restaurants collingwood")
+    urlshortener.mockCheckCall(0, "__nonzero__")
+    urlshortener.mockCheckCall(1, "shorten", "http://longurl.com/blah/cheesy/cheese")
+    client.mockCheckCall(0, "reply", "testid", "testusername", "http://shorturl.com/edam")
     
   def testShouldFetchOnlyNewQuestions(self):
     test_mentions = [ 
@@ -56,7 +70,7 @@ class TwitterBotTest (unittest.TestCase):
       { "id" : "testid", "user": { "screen_name": "eh" }, "text": "This @csausbot is really cool."}
       ]
     client = Mock({ "mentions": test_mentions })
-    twitterbot = TwitterBot(client, None)
+    twitterbot = TwitterBot(client, None, None)
     
     lastQuestion = Question.from_mention({ "id" : "12345", "user" : { "screen_name": "testusername"}, "text": "@username blah" })
     questions = twitterbot.questions_since(lastQuestion)

@@ -8,6 +8,10 @@ from google.appengine.ext import webapp
 from google.appengine.api import urlfetch
 from django.utils import simplejson
 
+class BitlyCredentials(db.Model):
+  username = db.StringProperty(required=True)
+  apikey = db.StringProperty(required=True)
+  
 class TwitterCredentials(db.Model):
   username = db.StringProperty(required=True)
   password = db.StringProperty(required=True)
@@ -44,9 +48,10 @@ class TwitterClient:
 
 class TwitterBot:
   
-  def __init__(self, client, oracle):
+  def __init__(self, client, oracle, shortener):
     self.client = client
     self.oracle = oracle
+    self.shortener = shortener
     
   def questions_since(self, last_question):
     last_mention = last_question.id if last_question else -1
@@ -62,7 +67,10 @@ class TwitterBot:
     return questions
     
   def answer(self, question):
-    self.client.reply(question.id, question.asker, self.oracle.answer(question.data))
+    answer = self.oracle.answer(question.data)
+    if self.shortener:
+      answer = self.shortener.shorten(answer)
+    self.client.reply(question.id, question.asker, answer)
     
 class Question(db.Model):
   id = db.StringProperty(default="")
@@ -103,3 +111,25 @@ class Question(db.Model):
   def is_valid(self):
     return len(self.asker) > 0 and len(self.id) > 0 and len(self.data) > 0 and self.data.find("@") == -1
  	
+class CitysearchOracle:
+  def answer(self, question):
+    return "http://citysearch.com.au/search?keyword="+urllib.quote(question)
+    
+class BitlyShortener:
+  def __init__(self, fetcher, credentials):
+    self.fetcher = fetcher
+    self.credentials = credentials
+    
+  def shorten(self, url_to_shorten):
+    short_url = None
+
+    api_shorten = "http://api.bit.ly/shorten?version=2.0.1&longUrl=%s&login=%s&apikey=%s" %(url_to_shorten, self.credentials.username, self.credentials.apikey)
+    result = self.fetcher.fetch(api_shorten, None, urlfetch.GET, None)          
+    if result.status_code != 200:
+      logging.error("Problem at the bit.ly end, status code %i, response was: %s" %(result.status_code, result.content))
+    else:
+      api_response = simplejson.loads(result.content)
+
+    short_url = api_response["results"][url_to_shorten]["shortUrl"]
+    return short_url
+

@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <title>Citysearch&reg; Twitter Bot Setup - URL Shortening</title>
+  </head>
+  <body>
+    <h1>bit.ly Credentials</h1>
+    {% if credentials %}
+      <p>Current username: {{credentials.username}}</p>
+      <p><a href="/setup/bitly/clear">Clear credentials (no credentials means no url shortening)</a>.</p>
+    {% else %}
+      <p>No bit.ly username stored yet, no shortening will be performed.</p>
+    {% endif %}
+    
+    <h2>Change username</h2>
+    {% if error %}
+      <p class="error">{{error}}</p>
+    {% endif %}
+    <form method="POST" action="/setup/bitly">
+      <label for="username">Username:</label>
+      <input type="text" id="username" name="username" value="{{credentials.username}}"/>
+      <label for="apikey">API Key:</label>
+      <input type="text" id="apikey" name="apikey" value="{{credentials.apikey}}"/>
+      <input type="submit" value="store"/>
+    </form>
+    
+</html>
