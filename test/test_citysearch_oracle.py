@@ -1,5 +1,4 @@
 import unittest
-from mock import Mock
 from cstwitterbot import CitysearchOracle
     
 class CitysearchOracleTest (unittest.TestCase):

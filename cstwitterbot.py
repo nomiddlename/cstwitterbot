@@ -39,7 +39,7 @@ class TwitterClient:
       mentions = simplejson.loads(result.content)
       
     return mentions
-		
+    
   def reply(self, status_id, username, reply_text):
     reply_url = "http://twitter.com/statuses/update.json?status=%s&in_reply_to_status_id=%s" %(urllib.quote("@"+username+" "+reply_text), urllib.quote(status_id))
     result = self.fetcher.fetch(reply_url, None, urlfetch.POST, self.headers)
@@ -106,11 +106,10 @@ class Question(db.Model):
   from_mention = staticmethod(from_mention)
   _clean = staticmethod(_clean)
   last_question = staticmethod(last_question)
-        
     
   def is_valid(self):
     return len(self.asker) > 0 and len(self.id) > 0 and len(self.data) > 0 and self.data.find("@") == -1
- 	
+    
 class CitysearchOracle:
   def answer(self, question):
     return "http://citysearch.com.au/search?keyword="+urllib.quote(question)
@@ -133,3 +132,12 @@ class BitlyShortener:
     short_url = api_response["results"][url_to_shorten]["shortUrl"]
     return short_url
 
+class Listener:
+  def __init__(self, twitterbot, queue):
+    self.twitterbot = twitterbot
+    self.queue = queue
+    
+  def listen(self):
+    questions = self.twitterbot.questions_since(Question.last_question())
+    for question in questions:
+      self.queue.add(uri="/answer", params={ "question": question.id })
