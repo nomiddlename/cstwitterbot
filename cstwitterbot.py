@@ -80,6 +80,9 @@ class Question(db.Model):
   answered = db.DateTimeProperty(auto_now=True)
   location = db.GeoPtProperty()
   
+  def __cmp__(self, other):
+    return cmp(self.id, other.id)
+  
   def from_mention(mention):
     question = Question()
     if "id" in mention:
@@ -141,3 +144,17 @@ class Listener:
     questions = self.twitterbot.questions_since(Question.last_question())
     for question in questions:
       self.queue.add(uri="/answer", params={ "question": question.id })
+
+class Answerer:
+  def __init__(self, twitterbot):
+    self.twitterbot = twitterbot
+    
+  def answer(self, question_id):
+    query = Question.all()
+    query.filter("id = ", question_id)
+    question = query.get()
+    
+    if question:
+      logging.info("Answering question %r", question)
+      self.twitterbot.answer(question)
+      question.put()

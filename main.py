@@ -79,7 +79,8 @@ def main():
 	('/setup/bitly/clear', BitlySetupHandler)
 	#('/listen', ListenHandler),
 	#('/answer', AnswerHandler)
-	])
+	],
+	debug=True)
 	wsgiref.handlers.CGIHandler().run(application)
 
 if __name__ == '__main__':
