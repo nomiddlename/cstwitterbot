@@ -6,9 +6,11 @@ import cstwitterbot
 import os
 import logging
 
+from google.appengine.api.labs import taskqueue
 from google.appengine.ext.db import BadValueError
 from google.appengine.ext.webapp import template
 from google.appengine.ext import webapp
+from google.appengine.api import urlfetch
 
 class SetupHandler(webapp.RequestHandler):
 	def get(self):
@@ -69,16 +71,54 @@ class BitlySetupHandler(webapp.RequestHandler):
 		template_values = { "credentials": credentials, "error": error }
 		path = os.path.join(os.path.dirname(__file__), 'bitly.html')
 		self.response.out.write(template.render(path, template_values))		
+	
+class ListenHandler(webapp.RequestHandler):
+	
+	def get(self):
+		listener = self.setup_listener()
+		if listener:
+			listener.listen()
+	
+	def setup_listener(self):
+		listener = None
+		twitter_credentials = cstwitterbot.TwitterCredentials.all().get()
+		if twitter_credentials:
+			client = cstwitterbot.TwitterClient(urlfetch, twitter_credentials)
+			twitterbot = cstwitterbot.TwitterBot(client, None, None)
+			listener = cstwitterbot.Listener(twitterbot, taskqueue)
+			
+		return listener
+
+class AnswerHandler(webapp.RequestHandler):
+	
+	def post(self):
+		answerer = self.setup_answerer()
+		if answerer:
+			answerer.answer(self.request.get("question"))
 		
+	def setup_answerer(self):
+		answerer = None
+		twitter_credentials = cstwitterbot.TwitterCredentials.all().get()
+		if twitter_credentials:
+			client = cstwitterbot.TwitterClient(urlfetch, twitter_credentials)
+			shortener = None
+			bitly_credentials = cstwitterbot.BitlyCredentials.all().get()
+			if bitly_credentials:
+				shortener = cstwitterbot.BitlyShortener(urlfetch, bitly_credentials)
+			twitterbot = cstwitterbot.TwitterBot(client, cstwitterbot.CitysearchOracle(), shortener)
+			answerer = cstwitterbot.Answerer(twitterbot)
+			
+		return answerer
+	
 def main():
 	application = webapp.WSGIApplication(
 	[
 	('/setup', SetupHandler),
 	('/setup/clear', SetupHandler),
 	('/setup/bitly', BitlySetupHandler),
-	('/setup/bitly/clear', BitlySetupHandler)
-	#('/listen', ListenHandler),
-	#('/answer', AnswerHandler)
+	('/setup/bitly/clear', BitlySetupHandler),
+	('/listen', ListenHandler),
+	('/answer', AnswerHandler)
 	],
 	debug=True)
 	wsgiref.handlers.CGIHandler().run(application)
