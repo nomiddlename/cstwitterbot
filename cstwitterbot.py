@@ -41,7 +41,7 @@ class TwitterClient:
     return mentions
     
   def reply(self, status_id, username, reply_text):
-    reply_url = "http://twitter.com/statuses/update.json?status=%s&in_reply_to_status_id=%s" %(urllib.quote("@"+username+" "+reply_text), urllib.quote(status_id))
+    reply_url = "http://twitter.com/statuses/update.json?status=%s&in_reply_to_status_id=%i" %(urllib.quote("@"+username+" "+reply_text), status_id)
     result = self.fetcher.fetch(reply_url, None, urlfetch.POST, self.headers)
     if result.status_code != 200:
       logging.error("Problem updating status, url was {%s}, status code %i, response was: %s" %(reply_url, result.status_code, result.content))
@@ -73,7 +73,7 @@ class TwitterBot:
     self.client.reply(question.id, question.asker, answer)
     
 class Question(db.Model):
-  id = db.StringProperty(default="")
+  id = db.IntegerProperty(default=-1)
   asker = db.StringProperty(default="")
   data = db.StringProperty(default="")
   retrieved = db.DateTimeProperty(auto_now_add=True)
@@ -111,7 +111,7 @@ class Question(db.Model):
   last_question = staticmethod(last_question)
     
   def is_valid(self):
-    return len(self.asker) > 0 and len(self.id) > 0 and len(self.data) > 0 and self.data.find("@") == -1
+    return len(self.asker) > 0 and self.id > 0 and len(self.data) > 0 and self.data.find("@") == -1
     
 class CitysearchOracle:
   def answer(self, question):
@@ -143,18 +143,21 @@ class Listener:
   def listen(self):
     questions = self.twitterbot.questions_since(Question.last_question())
     for question in questions:
-      self.queue.add(uri="/answer", params={ "question": question.id })
+      self.queue.add(url="/answer", params={ "question": question.id })
 
 class Answerer:
   def __init__(self, twitterbot):
     self.twitterbot = twitterbot
     
   def answer(self, question_id):
+    logging.info("Have been asked to answer question with id %i", int(question_id))
     query = Question.all()
-    query.filter("id = ", question_id)
+    query.filter("id = ", int(question_id))
     question = query.get()
     
     if question:
       logging.info("Answering question %r", question)
       self.twitterbot.answer(question)
       question.put()
+    else:
+      logging.info("Could not find question with id %i", question_id)

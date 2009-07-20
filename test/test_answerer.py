@@ -10,7 +10,7 @@ class AnswererTest(unittest.TestCase):
     test_question = None
     
     def setUp(self):
-        self.test_question = Question(id="12345", asker="Cheese", data="blah blah")
+        self.test_question = Question(id=12345, asker="Cheese", data="blah blah")
         self.test_question.put()
         
     def test_should_answer_question(self):
@@ -18,7 +18,7 @@ class AnswererTest(unittest.TestCase):
         twitterbot = Mock({"answer": None}, TwitterBot)
         answerer = Answerer(twitterbot)
         
-        answerer.answer("12345")
+        answerer.answer(12345)
         twitterbot.mockCheckCall(0, "answer", self.test_question)
         
     def tearDown(self):

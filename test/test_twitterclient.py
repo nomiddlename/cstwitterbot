@@ -35,5 +35,5 @@ class TwitterClientTest (unittest.TestCase):
     self.assertEqual(mentions[0]['cheese'], "biscuits")    
     
   def testReply(self):
-    self.client.reply("statusid", "username", "reply text")
-    self.fetcher.mockCheckCall(0, "fetch", "http://twitter.com/statuses/update.json?status=%40username%20reply%20text&in_reply_to_status_id=statusid", None, urlfetch.POST, self.client.headers)
+    self.client.reply(12345, "username", "reply text")
+    self.fetcher.mockCheckCall(0, "fetch", "http://twitter.com/statuses/update.json?status=%40username%20reply%20text&in_reply_to_status_id=12345", None, urlfetch.POST, self.client.headers)
